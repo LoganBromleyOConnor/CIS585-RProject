@@ -4,12 +4,13 @@ require(jsonlite)
 require(tm)
 require(ggwordcloud)
 require(dplyr)
+require(anytime)
 #-----------------------------
 
 #Getting data
 
-steamappid <- "730" #ID of the game/app in Steam
-url <- paste0('https://store.steampowered.com/appreviews/',steamappid,'?json=1&filter=all&language=english&num_per_page=100&start_offset=')
+steamappid <- "230410" #ID of the game/app in Steam
+url <- paste0('https://store.steampowered.com/appreviews/',steamappid,'?json=1&filter=all&language=english&day_range=9223372036854775807&num_per_page=100&start_offset=')
 pages <- list() #The list that the raw JSON will be stored in
 i <- 0 #The starting offset value for the API request
 amount <- 1000 #amount of reviews
@@ -35,6 +36,8 @@ while(numofentries < amount){
   i <- i+100 #Moving to next set of reviews
   
 }
+message("Done")
+message(amount, " reviews with the oldest being from ", anytime(tail(reviewdata_df$timestamp_created, 1)) )
 
 #-----------------------------
 #Organizing data
