@@ -5,15 +5,19 @@ require(tm)
 require(ggwordcloud)
 require(dplyr)
 require(anytime)
+require(tidytext)
 #-----------------------------
 
 #Getting data
 
-steamappid <- "230410" #ID of the game/app in Steam
+steamappid <- "294100" #ID of the game/app in Steam
 url <- paste0('https://store.steampowered.com/appreviews/',steamappid,'?json=1&filter=all&language=english&day_range=9223372036854775807&num_per_page=100&start_offset=')
+storeurl <- read_html(paste0("https://store.steampowered.com/app/",steamappid))
+gamename <- storeurl %>% html_nodes("div.apphub_AppName") %>% html_text()
+gamename <- tolower(gamename)
 pages <- list() #The list that the raw JSON will be stored in
 i <- 0 #The starting offset value for the API request
-amount <- 1000 #amount of reviews
+amount <- 2500 #amount of reviews
 numofentries <- 0
 
 while(numofentries < amount){
@@ -64,6 +68,7 @@ clean_corpus <- function(corpus){  #Function to clean the corpus
   corpus <- tm_map(corpus, stripWhitespace) #Getting rid of unwanted white space
   corpus <- tm_map(corpus, removePunctuation) #Getting rid of punctuation
   corpus <- tm_map(corpus, content_transformer(tolower)) #making all characters lowercase
+  corpus <- tm_map(corpus, removeWords, gamename)
   corpus <- tm_map(corpus, removeWords, c("game", "review", "like", "can", "theres", 
                                           "just", "even", "games", "really", "1010", "dont",
                                           "will", "ive", "one", "along", "doesnt", "well", 
@@ -79,7 +84,12 @@ negreviews <- clean_corpus(negreviews)
 
 find_freq_words <- function(corpus){ #Funcion to find the frequency of each word
   
-  dtm <- TermDocumentMatrix(corpus) #Turning the corpus into a TermDocumentMatrix
+  BigramTokenizer <-
+    function(x)
+      unlist(lapply(ngrams(words(x), 2), paste, collapse = " "), use.names = FALSE)
+  
+  dtm <- TermDocumentMatrix(corpus, control = list(tokenize = BigramTokenizer))
+  
   m <- as.matrix(dtm)
   v <- sort(rowSums(m),decreasing=TRUE)
   d <- data.frame(word = names(v),freq=v) #Creating a data frame of the terms and their frequencies
@@ -105,3 +115,5 @@ poswordcloud #Displaying word cloud
 
 negwordcloud <- create_wordcloud(negreviewfreq, wc_min_freq, wc_max_words)
 negwordcloud
+
+
