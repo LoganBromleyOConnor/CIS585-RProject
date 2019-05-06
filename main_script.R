@@ -11,7 +11,7 @@ require(hunspell)
 
 #Getting data
 
-steamappid <- "294100" #ID of the game/app in Steam
+steamappid <- "289070" #ID of the game/app in Steam
 url <- paste0('https://store.steampowered.com/appreviews/',steamappid,'?json=1&filter=all&language=english&day_range=9223372036854775807&num_per_page=100&purchase_type=all&start_offset=')
 storeurl <- read_html(paste0("https://store.steampowered.com/app/",steamappid))
 gamename <- tolower(storeurl %>% html_nodes("div.apphub_AppName") %>% html_text())
@@ -59,6 +59,8 @@ negreviews <- negreview_df$review
 posreviews <- iconv(posreviews, 'UTF-8', 'ASCII') #Removing emojis or other non-text characters
 negreviews <- iconv(negreviews, 'UTF-8', 'ASCII')
 
+
+# Gathering list of misspelled words that will be cleaned and combined to be used later
 badpos <- hunspell(posreview_df$review) #Getting list of misspelled words to remove
 badneg <- hunspell(negreview_df$review)
 badpos <- unlist(badpos)
@@ -67,12 +69,6 @@ badneg <- unlist(badneg)
 badpos <- iconv(badpos, 'UTF-8', 'ASCII')
 badneg <- iconv(badneg, 'UTF-8', 'ASCII')
 
-rm(posreview_df, negreview_df) #Removing unused data to clear up memory
-
-posreviews <- VCorpus(VectorSource(posreviews)) #Creating Corpus of the reviews
-negreviews <- VCorpus(VectorSource(negreviews))
-
-# Gathering list of misspelled words that will be cleaned and combined to be used later
 badneg <- removeNumbers(badneg)
 badpos <- removeNumbers(badpos)
 
@@ -90,6 +86,11 @@ badwords <- c(badpos, badneg)
 badwords <- unique(badwords)
 # End of misspelled word cleaning
 
+rm(posreview_df, negreview_df) #Removing unused data to clear up memory
+
+posreviews <- VCorpus(VectorSource(posreviews)) #Creating Corpus of the reviews
+negreviews <- VCorpus(VectorSource(negreviews))
+
 clean_corpus <- function(corpus, badwords){  #Function to clean the corpus 
   corpus <- tm_map(corpus, stripWhitespace) #Getting rid of unwanted white space
   corpus <- tm_map(corpus, removePunctuation) #Getting rid of punctuation
@@ -99,7 +100,7 @@ clean_corpus <- function(corpus, badwords){  #Function to clean the corpus
                                           "will", "ive", "one", "along", "doesnt", "well", 
                                           "much", "many", "also", "lets", "isnt", "good", "bad", 
                                           "not", "get", "great", "play", "playing", "played", "early",
-                                          "access", "b", "u")) #List of unwanted words
+                                          "access", "b", "u", "®")) #List of unwanted words
   corpus <- tm_map(corpus, removeWords, stopwords("en")) #Removing stopwords
   corpus <- tm_map(corpus, removeNumbers)
   corpus <- tm_map(corpus, removeWords, gamename)
@@ -160,17 +161,20 @@ negreviewfreq <- find_freq_words(negreviews)
 
 wc_min_freq <- 5 #Variable to adjust the minimum frequency required to be displayed on the word cloud
 wc_max_words <- 30 #Variable to adjust the maxium amount of words to be displayed on the word cloud
+wc_shape <- "pentagon"
 
-create_wordcloud <- function(wordfreq, wc_min_freq, wc_max_words){ #Function to create word cloud
+create_wordcloud <- function(wordfreq, wc_min_freq, wc_max_words, wccolor)
+{ #Function to create word cloud
   
   set.seed(78)
-  ggwordcloud(wordfreq$word, wordfreq$freq, min.freq = wc_min_freq, max.words = wc_max_words, shape = "pentagon")
+  ggwordcloud(wordfreq$word, wordfreq$freq, min.freq = wc_min_freq, 
+              max.words = wc_max_words, shape = wc_shape, color = wccolor)
   
 }
 
-poswordcloud <- create_wordcloud(posreviewfreq, wc_min_freq, wc_max_words) #Creating word cloud
+poswordcloud <- create_wordcloud(posreviewfreq, wc_min_freq, wc_max_words, "darkgreen") #Creating word cloud
 poswordcloud #Displaying word cloud
 
-negwordcloud <- create_wordcloud(negreviewfreq, wc_min_freq, wc_max_words)
+negwordcloud <- create_wordcloud(negreviewfreq, wc_min_freq, wc_max_words, "darkred")
 negwordcloud
 
